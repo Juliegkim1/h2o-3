@@ -640,7 +640,7 @@ public class GLRM extends ModelBuilder<GLRMModel, GLRMModel.GLRMParameters, GLRM
           UpdateX xtsk = new UpdateX(_parms, yt, step/_ncolA, overwriteX, _ncolA, _ncolX, dinfo._cats, model._output._normSub, model._output._normMul, model._output._lossFunc, weightId);
           xtsk.doAll(dinfo._adaptedFrame);
           model._output._updates++;
-          Log.info("Time taken to updateX is "+(System.currentTimeMillis()-curtime)/1000);
+          Log.info("Time taken (ms) to updateX is "+(System.currentTimeMillis()-curtime));
 
           // 2) Update Y matrix given fixed X
           curtime = System.currentTimeMillis();
@@ -651,14 +651,14 @@ public class GLRM extends ModelBuilder<GLRMModel, GLRMModel.GLRMParameters, GLRM
             yreg = ytsk._yreg;
             model._output._updates++;
           }
-          Log.info("Time taken to updateY is "+(System.currentTimeMillis()-curtime)/1000);
+          Log.info("Time taken (ms) to updateY is "+(System.currentTimeMillis()-curtime));
 
           // 3) Compute average change in objective function
           curtime = System.currentTimeMillis();
           objtsk = new ObjCalc(_parms, ytnew, _ncolA, _ncolX, dinfo._cats, model._output._normSub, model._output._normMul, model._output._lossFunc, weightId);
           objtsk.doAll(dinfo._adaptedFrame);
           double obj_new = objtsk._loss + _parms._gamma_x * xtsk._xreg + _parms._gamma_y * yreg;
-          Log.info("Time taken to calculate new objective function value is "+(System.currentTimeMillis()-curtime)/1000);
+          Log.info("Time taken (ms) to calculate new objective function value is "+(System.currentTimeMillis()-curtime));
           model._output._avg_change_obj = (model._output._objective - obj_new) / nobs;
           model._output._iterations++;
 
@@ -680,7 +680,7 @@ public class GLRM extends ModelBuilder<GLRMModel, GLRMModel.GLRMParameters, GLRM
               _job.update(0,"Iteration " + model._output._iterations + ": Objective increased to " + obj_new + "; reducing step size to " + step);
             }
           }
-          Log.info("Time taken to set the step size is "+(System.currentTimeMillis()-curtime)/1000);
+          Log.info("Time taken (ms) to set the step size is "+(System.currentTimeMillis()-curtime));
 
           // Add to scoring history
           curtime = System.currentTimeMillis();
@@ -689,7 +689,7 @@ public class GLRM extends ModelBuilder<GLRMModel, GLRMModel.GLRMParameters, GLRM
           model._output._history_objective = ArrayUtils.copyAndFillOf(model._output._history_objective, model._output._history_objective.length+1, model._output._objective);
           model._output._scoring_history = createScoringHistoryTable(model._output);
           model.update(_job); // Update model in K/V store
-          Log.info("Time taken to history of run is "+(System.currentTimeMillis()-curtime)/1000);
+          Log.info("Time taken (ms) to history of run is "+(System.currentTimeMillis()-curtime));
         }
 
         // 4) Save solution to model output
