@@ -548,6 +548,7 @@ public class GLRM extends ModelBuilder<GLRMModel, GLRMModel.GLRMParameters, GLRM
       DataInfo dinfo = null, xinfo = null, tinfo = null;
       Frame fr = null;
       boolean overwriteX = false;
+      long curtime = 0;
 
       try {
         init(true);   // Initialize parameters
@@ -604,19 +605,29 @@ public class GLRM extends ModelBuilder<GLRMModel, GLRMModel.GLRMParameters, GLRM
 
         // Use closed form solution for X if quadratic loss and regularization
         _job.update(1, "Initializing X and Y matrices");   // One unit of work
+
+        curtime = System.currentTimeMillis();
         double[/*k*/][/*features*/] yinit = initialXY(tinfo, dinfo._adaptedFrame, model, na_cnt);
+        Log.info("Time taken (ms) to initializeXY with (Y operation single thread) is "+(System.currentTimeMillis()-curtime));
         Archetypes yt = new Archetypes(ArrayUtils.transpose(yinit), true, tinfo._catOffsets, numLevels);  // Store Y' for more efficient matrix ops (rows = features, cols = k rank)
         Archetypes ytnew = yt;
+
+        curtime = System.currentTimeMillis();
         double yreg = _parms.regularize_y(yt._archetypes);
+        Log.info("Time taken (ms) to calculate regularize_y in single thread is "+(System.currentTimeMillis()-curtime));
+
         if (!(_parms._init == Initialization.User && null != _parms._user_x) && _parms.hasClosedForm(na_cnt))    // Set X to closed-form solution of ALS equation if possible for better accuracy
           initialXClosedForm(dinfo, yt, model._output._normSub, model._output._normMul);
 
         // Compute initial objective function
         _job.update(1, "Computing initial objective function");   // One unit of work
         boolean regX = _parms._regularization_x != GLRMParameters.Regularizer.None && _parms._gamma_x != 0;  // Assume regularization on initial X is finite, else objective can be NaN if \gamma_x = 0
+
+        curtime = System.currentTimeMillis();
         ObjCalc objtsk = new ObjCalc(_parms, yt, _ncolA, _ncolX, dinfo._cats, model._output._normSub,
                                      model._output._normMul, model._output._lossFunc, weightId, regX);
         objtsk.doAll(dinfo._adaptedFrame);
+        Log.info("Time taken (ms) to calculate regularize_x and calculate objective function value is "+(System.currentTimeMillis()-curtime));
         model._output._objective = objtsk._loss + _parms._gamma_x * objtsk._xold_reg + _parms._gamma_y * yreg;
         model._output._archetypes_raw = yt;
         model._output._iterations = 0;
@@ -628,7 +639,6 @@ public class GLRM extends ModelBuilder<GLRMModel, GLRMModel.GLRMParameters, GLRM
         double step = _parms._init_step_size;   // Initial step size
         int steps_in_row = 0;                   // Keep track of number of steps taken that decrease objective
 
-        long curtime = 0;
         while (!isDone(model, steps_in_row, step)) {
           _job.update(1, "Iteration " + String.valueOf(model._output._iterations+1) + " of alternating minimization");   // One unit of work
 
